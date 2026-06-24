@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { apiFetch, ApiError } from "@/lib/api";
 
+const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000/api";
+
 interface Video {
   id: string;
   title: string;
@@ -54,6 +56,33 @@ export default function VideoPage() {
     }
   }
 
+  async function uploadLocal(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError("");
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const resp = await fetch(`${BASE}/video/upload`, {
+        method: "POST",
+        headers: token() ? { Authorization: `Bearer ${token()}` } : {},
+        body: fd,
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        setError(data.detail ?? "Upload failed");
+      } else {
+        setActive(data);
+        refresh();
+      }
+    } catch {
+      setError("Could not reach the server.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function ask() {
     if (!active) return;
     setAnswer("");
@@ -93,6 +122,18 @@ export default function VideoPage() {
           {busy ? "Transcribing…" : "Add video"}
         </button>
       </div>
+
+      <div className="mt-3 flex items-center gap-3 text-sm text-quest-muted">
+        <span>or upload a local video/audio file:</span>
+        <label className="cursor-pointer rounded-lg border border-quest-muted/30 px-3 py-1.5 hover:border-quest-cyan">
+          Choose file
+          <input type="file" accept="video/*,audio/*" onChange={uploadLocal} className="hidden" />
+        </label>
+      </div>
+      <p className="mt-1 text-xs text-quest-muted/70">
+        Local transcription needs <code>faster-whisper</code> on the server; otherwise you&apos;ll get a
+        message to install it (the YouTube-URL path always works).
+      </p>
       {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
 
       <div className="mt-6 flex flex-wrap gap-2">

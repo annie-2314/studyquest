@@ -13,6 +13,7 @@ interface Profile {
 interface LbRow { display_name: string; xp: number; level: number; streak: number; }
 interface Card { front: string; back: string; }
 interface BossQ { q: string; options: string[]; answer_index: number; }
+interface Source { id: string; title: string; kind: string; }
 
 const tok = () => localStorage.getItem("sq_access") ?? undefined;
 
@@ -22,6 +23,8 @@ export default function Arcade() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [board, setBoard] = useState<LbRow[]>([]);
   const [topic, setTopic] = useState("fractions");
+  const [sources, setSources] = useState<Source[]>([]);
+  const [sourceId, setSourceId] = useState("");  // "" = use typed topic
   const [cards, setCards] = useState<Card[]>([]);
   const [flipped, setFlipped] = useState<number | null>(null);
   const [boss, setBoss] = useState<BossQ[]>([]);
@@ -35,18 +38,24 @@ export default function Arcade() {
 
   const loadProfile = () => apiFetch<Profile>("/game/profile", {}, tok()).then(setProfile).catch(() => {});
   const loadBoard = () => apiFetch<LbRow[]>("/game/leaderboard", {}, tok()).then(setBoard).catch(() => {});
+  const loadSources = () => apiFetch<Source[]>("/game/sources", {}, tok()).then(setSources).catch(() => {});
   useEffect(() => {
-    if (user) { loadProfile(); loadBoard(); }
+    if (user) { loadProfile(); loadBoard(); loadSources(); }
   }, [user]);
 
+  // Build the request body: a chosen document drives the game, else the typed topic.
+  function gameBody() {
+    return JSON.stringify(sourceId ? { document_id: sourceId } : { topic });
+  }
+
   async function getCards() {
-    const r = await apiFetch<{ cards: Card[] }>("/game/flashcards", { method: "POST", body: JSON.stringify({ topic }) }, tok());
+    const r = await apiFetch<{ cards: Card[] }>("/game/flashcards", { method: "POST", body: gameBody() }, tok());
     setCards(r.cards);
     setFlipped(null);
   }
 
   async function startBoss() {
-    const r = await apiFetch<{ questions: BossQ[] }>("/game/boss", { method: "POST", body: JSON.stringify({ topic }) }, tok());
+    const r = await apiFetch<{ questions: BossQ[] }>("/game/boss", { method: "POST", body: gameBody() }, tok());
     setBoss(r.questions);
     setBossIdx(0);
     setBossScore(0);
@@ -98,16 +107,33 @@ export default function Arcade() {
         </div>
       </section>
 
-      {/* Topic control */}
-      <div className="mt-6 flex gap-2">
-        <input
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          placeholder="Topic for mini-games"
-          className="flex-1 rounded-xl border border-quest-muted/30 bg-quest-bg px-4 py-2 text-sm outline-none focus:border-quest-cyan"
-        />
-        <button onClick={getCards} className="rounded-xl border border-quest-muted/30 px-4 py-2 text-sm hover:border-quest-cyan">Flashcards</button>
-        <button onClick={startBoss} className="rounded-xl bg-quest-violet px-4 py-2 text-sm">Boss battle</button>
+      {/* Source control — play from a typed topic OR your own uploaded material */}
+      <div className="mt-6 space-y-2">
+        <select
+          value={sourceId}
+          onChange={(e) => setSourceId(e.target.value)}
+          className="w-full rounded-xl border border-quest-muted/30 bg-quest-bg px-4 py-2 text-sm outline-none focus:border-quest-cyan"
+        >
+          <option value="">Use a typed topic</option>
+          {sources.length > 0 && <option disabled>— or build from my uploads —</option>}
+          {sources.map((s) => (
+            <option key={s.id} value={s.id}>{s.kind === "video" ? "🎬" : "📄"} {s.title}</option>
+          ))}
+        </select>
+        <div className="flex gap-2">
+          <input
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            disabled={!!sourceId}
+            placeholder={sourceId ? "Using your uploaded material" : "Topic for mini-games"}
+            className="flex-1 rounded-xl border border-quest-muted/30 bg-quest-bg px-4 py-2 text-sm outline-none focus:border-quest-cyan disabled:opacity-50"
+          />
+          <button onClick={getCards} className="rounded-xl border border-quest-muted/30 px-4 py-2 text-sm hover:border-quest-cyan">Flashcards</button>
+          <button onClick={startBoss} className="rounded-xl bg-quest-violet px-4 py-2 text-sm">Boss battle</button>
+        </div>
+        <p className="text-xs text-quest-muted/70">
+          Add material in <span className="text-quest-cyan">Study Tools</span> or <span className="text-quest-cyan">Video RAG</span>, then it appears here to play from.
+        </p>
       </div>
 
       {/* Flashcards */}
