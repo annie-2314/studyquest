@@ -74,6 +74,15 @@ export default function Dashboard() {
             XP, levels, streaks, badges, leaderboard, flashcards, and boss-battle quizzes.
           </p>
         </Link>
+        <Link
+          href="/plan"
+          className="rounded-2xl border border-quest-muted/20 bg-quest-surface p-6 hover:border-quest-cyan"
+        >
+          <h2 className="font-display text-lg font-semibold text-quest-cyan">📝 Study Plan + PDF</h2>
+          <p className="mt-2 text-sm text-quest-muted">
+            A multi-agent crew builds a personalized study plan you can download as a PDF.
+          </p>
+        </Link>
       </div>
 
       <button

@@ -22,3 +22,8 @@ yt-dlp==2024.8.6
 youtube-transcript-api==0.6.2
 # --- Phase 6: OPTIONAL file transcription (heavy; YouTube-URL path works without it) ---
 # faster-whisper==1.0.3
+# --- Phase 8: PDF study guide ---
+fpdf2==2.7.9
+# CrewAI (OPTIONAL): requires MS C++ Build Tools (chromadb/hnswlib) on Windows.
+# The Study-Plan crew runs without it via app/crew/study_plan.py.
+# crewai==0.51.1
