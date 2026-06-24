@@ -7,11 +7,48 @@ link, private playlist, no captions, offline, etc.).
 """
 from __future__ import annotations
 
+import functools
+import os
+import tempfile
 from dataclasses import dataclass
+
+from app.config import settings
 
 
 class YouTubeError(Exception):
     pass
+
+
+def _cookie_opts() -> dict:
+    """yt-dlp options to authenticate via the browser's YouTube cookies, when
+    configured. Bypasses the 'Please sign in' anti-bot block on flagged IPs."""
+    browser = settings.ytdlp_cookies_from_browser.strip()
+    if settings.youtube_cookies_file:
+        return {"cookiefile": settings.youtube_cookies_file}
+    if browser:
+        return {"cookiesfrombrowser": (browser,)}
+    return {}
+
+
+@functools.lru_cache(maxsize=1)
+def _transcript_cookie_file() -> str | None:
+    """youtube-transcript-api takes a cookies.txt path (not a browser). If an
+    explicit file is set, use it; else try to extract one from the browser via
+    yt-dlp. Returns None (run without cookies) if unavailable."""
+    if settings.youtube_cookies_file:
+        return settings.youtube_cookies_file
+    browser = settings.ytdlp_cookies_from_browser.strip()
+    if not browser:
+        return None
+    try:
+        from yt_dlp.cookies import extract_cookies_from_browser
+
+        jar = extract_cookies_from_browser(browser)
+        path = os.path.join(tempfile.gettempdir(), "sq_youtube_cookies.txt")
+        jar.save(path, ignore_discard=True, ignore_expires=True)
+        return path
+    except Exception:
+        return None
 
 
 @dataclass
@@ -38,7 +75,7 @@ def fetch_playlist(url: str) -> tuple[str, list[PlaylistVideo]]:
     import yt_dlp
 
     opts = {"quiet": True, "extract_flat": "in_playlist", "skip_download": True,
-            "ignoreerrors": True}
+            "ignoreerrors": True, **_cookie_opts()}
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -68,6 +105,9 @@ def fetch_transcript(video_id: str) -> list[dict]:
     from youtube_transcript_api._errors import (NoTranscriptFound,
                                                 TranscriptsDisabled)
     try:
+        cookies = _transcript_cookie_file()
+        if cookies:
+            return YouTubeTranscriptApi.get_transcript(video_id, cookies=cookies)
         return YouTubeTranscriptApi.get_transcript(video_id)
     except (TranscriptsDisabled, NoTranscriptFound):
         raise YouTubeError("This video has no available transcript/captions.")

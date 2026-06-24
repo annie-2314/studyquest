@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     openrouter_model_fast: str = "anthropic/claude-3.5-haiku"
     openrouter_model_smart: str = "anthropic/claude-3.5-sonnet"
 
+    # --- YouTube auth (optional) — bypass "Please sign in" anti-bot blocking ---
+    # Pull cookies from your logged-in browser: "edge" | "chrome" | "firefox".
+    ytdlp_cookies_from_browser: str = ""
+    # Or point at an exported Netscape cookies.txt instead.
+    youtube_cookies_file: str = ""
+
     # --- Optional observability (Phase 10) ---
     langchain_api_key: str = ""
     langchain_tracing_v2: bool = False
