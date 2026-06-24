@@ -5,6 +5,10 @@ import os
 import pathlib
 
 os.environ["DATABASE_URL"] = "sqlite:///./test_studyquest.db"
+# Force deterministic MOCK mode for tests (empty env var overrides any .env key),
+# so the suite never makes real, billable OpenRouter calls.
+os.environ["OPENROUTER_API_KEY"] = ""
+os.environ["LANGCHAIN_TRACING_V2"] = "false"
 
 # Start every test session from a clean database so inserts (e.g. signup) are
 # idempotent across repeated runs.

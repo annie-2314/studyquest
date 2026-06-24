@@ -20,6 +20,26 @@ FAST = "fast"
 SMART = "smart"
 
 
+def _ssl_http_clients():
+    """Build httpx clients that trust the OS certificate store.
+
+    Corporate / inspected networks present a TLS cert signed by a root that
+    isn't in certifi's bundle, which breaks the default OpenAI/httpx client
+    (CERTIFICATE_VERIFY_FAILED). truststore uses the OS store (where that root
+    lives) instead. Returns (sync_client, async_client) or (None, None) if
+    truststore isn't available (then the library defaults apply)."""
+    try:
+        import ssl
+
+        import httpx
+        import truststore
+
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        return httpx.Client(verify=ctx), httpx.AsyncClient(verify=ctx)
+    except Exception:
+        return None, None
+
+
 def _model_for(tier: str) -> str:
     return settings.openrouter_model_smart if tier == SMART else settings.openrouter_model_fast
 
@@ -35,6 +55,12 @@ def get_llm(tier: str = FAST, temperature: float = 0.3):
     # Imported lazily so the app imports cleanly even if langchain isn't present.
     from langchain_openai import ChatOpenAI
 
+    sync_client, async_client = _ssl_http_clients()
+    kwargs = {}
+    if sync_client is not None:
+        kwargs["http_client"] = sync_client
+        kwargs["http_async_client"] = async_client
+
     return ChatOpenAI(
         model=_model_for(tier),
         temperature=temperature,
@@ -45,6 +71,7 @@ def get_llm(tier: str = FAST, temperature: float = 0.3):
             "HTTP-Referer": "https://studyquest.ai",
             "X-Title": "StudyQuest AI",
         },
+        **kwargs,
     )
 
 
