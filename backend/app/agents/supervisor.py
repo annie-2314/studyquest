@@ -39,7 +39,9 @@ def build_chat_messages(route: str, memory_ctx: str, history: list[dict], user_m
     """Assemble the (role, content) list sent to the chat model."""
     system = specialist_prompt(route) + "\n\n[Learner profile]\n" + memory_ctx
     messages: list[tuple[str, str]] = [("system", system)]
-    for h in history[-10:]:  # keep context bounded
+    # Keep context tight to save tokens — only the last few turns matter for a
+    # tutoring Q&A, and simple one-off questions carry almost no history.
+    for h in history[-4:]:
         role = "assistant" if h.get("role") == "assistant" else "user"
         messages.append((role, h.get("content", "")))
     messages.append(("user", user_message))
@@ -67,7 +69,9 @@ def _respond_node(state: TutorState) -> TutorState:
     msgs = build_chat_messages(
         state["route"], state.get("memory_ctx", ""), state.get("history", []), state["user_message"]
     )
-    model = llm_mod.get_llm(llm_mod.SMART)
+    # Chat tutoring uses the FAST/cheap tier — it's plenty for conversational
+    # explanations and keeps everyday questions inexpensive.
+    model = llm_mod.get_llm(llm_mod.FAST)
     if model is None:
         system = msgs[0][1]
         return {"answer": llm_mod.mock_reply(system, state["user_message"])}
@@ -117,7 +121,7 @@ async def stream_turn(
     route = classify_route(user_message)
     yield ("route", route)
     msgs = build_chat_messages(route, memory_ctx, history, user_message)
-    model = llm_mod.get_llm(llm_mod.SMART)
+    model = llm_mod.get_llm(llm_mod.FAST)  # cheap tier for streaming chat
     if model is None:
         text = llm_mod.mock_reply(msgs[0][1], user_message)
         async for tok in llm_mod.stream_text(text):
