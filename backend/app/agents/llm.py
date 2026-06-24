@@ -20,24 +20,16 @@ FAST = "fast"
 SMART = "smart"
 
 
-def _ssl_http_clients():
-    """Build httpx clients that trust the OS certificate store.
-
-    Corporate / inspected networks present a TLS cert signed by a root that
-    isn't in certifi's bundle, which breaks the default OpenAI/httpx client
-    (CERTIFICATE_VERIFY_FAILED). truststore uses the OS store (where that root
-    lives) instead. Returns (sync_client, async_client) or (None, None) if
-    truststore isn't available (then the library defaults apply)."""
-    try:
-        import ssl
-
-        import httpx
-        import truststore
-
-        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        return httpx.Client(verify=ctx), httpx.AsyncClient(verify=ctx)
-    except Exception:
-        return None, None
+# Cache model instances per (tier, temperature, model) — building ChatOpenAI
+# objects repeatedly is wasteful.
+#
+# TLS NOTE: we deliberately do NOT pass a custom truststore http_client here.
+# `pip-system-certs` (installed for yt-dlp/requests) already patches Python's
+# default SSL to use the OS certificate store, so the default OpenAI/httpx
+# client verifies correctly behind TLS-inspecting proxies. Layering an explicit
+# truststore.SSLContext on top of that patch causes infinite recursion
+# (RecursionError) — so we let the default client handle TLS.
+_llm_cache: dict = {}
 
 
 def _model_for(tier: str) -> str:
@@ -45,34 +37,35 @@ def _model_for(tier: str) -> str:
 
 
 def get_llm(tier: str = FAST, temperature: float = 0.3):
-    """Return a LangChain chat model bound to OpenRouter, or None if no key.
+    """Return a cached LangChain chat model bound to OpenRouter, or None if no key.
 
     Callers should check `settings.has_llm` (or a None return) and use the mock
     helpers below when the model is unavailable.
     """
     if not settings.has_llm:
         return None
+
+    cache_key = (tier, temperature, _model_for(tier))
+    if cache_key in _llm_cache:
+        return _llm_cache[cache_key]
+
     # Imported lazily so the app imports cleanly even if langchain isn't present.
     from langchain_openai import ChatOpenAI
 
-    sync_client, async_client = _ssl_http_clients()
-    kwargs = {}
-    if sync_client is not None:
-        kwargs["http_client"] = sync_client
-        kwargs["http_async_client"] = async_client
-
-    return ChatOpenAI(
+    model = ChatOpenAI(
         model=_model_for(tier),
         temperature=temperature,
         api_key=settings.openrouter_api_key,
         base_url=settings.openrouter_base_url,
+        max_retries=3,  # ride out transient proxy/network hiccups
         # OpenRouter recommends these headers for attribution; harmless if unused.
         default_headers={
             "HTTP-Referer": "https://studyquest.ai",
             "X-Title": "StudyQuest AI",
         },
-        **kwargs,
     )
+    _llm_cache[cache_key] = model
+    return model
 
 
 def mock_reply(system: str, user: str) -> str:
