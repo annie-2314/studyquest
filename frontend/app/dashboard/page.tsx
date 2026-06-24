@@ -56,6 +56,15 @@ export default function Dashboard() {
             Write code, run it in a sandbox, and get an AI code review for coding courses.
           </p>
         </Link>
+        <Link
+          href="/video"
+          className="rounded-2xl border border-quest-muted/20 bg-quest-surface p-6 hover:border-quest-cyan"
+        >
+          <h2 className="font-display text-lg font-semibold text-quest-cyan">🎬 Video RAG</h2>
+          <p className="mt-2 text-sm text-quest-muted">
+            Add a video, then ask questions answered with timestamp citations.
+          </p>
+        </Link>
       </div>
 
       <button

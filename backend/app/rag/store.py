@@ -55,6 +55,38 @@ def add_document(db: Session, user_id: str, title: str, text: str,
     return doc
 
 
+def _ts(seconds: float) -> str:
+    m, s = divmod(int(seconds), 60)
+    return f"{m:02d}:{s:02d}"
+
+
+def add_segments_document(db: Session, user_id: str, title: str, segments: list[dict],
+                          kind: str = "video", window_seconds: int = 30) -> Document:
+    """Store a transcript (list of {text,start,...}) as a document whose chunks
+    are ~window_seconds windows, each cited by its [mm:ss] start timestamp."""
+    doc = Document(user_id=user_id, title=title, kind=kind)
+    db.add(doc)
+    db.flush()
+    buf: list[str] = []
+    start = None
+    ordinal = 0
+    for seg in segments:
+        if start is None:
+            start = seg.get("start", 0)
+        buf.append(seg.get("text", ""))
+        if seg.get("start", 0) - start >= window_seconds:
+            db.add(DocChunk(document_id=doc.id, ordinal=ordinal, content=" ".join(buf),
+                            source_ref=_ts(start)))
+            ordinal += 1
+            buf, start = [], None
+    if buf:
+        db.add(DocChunk(document_id=doc.id, ordinal=ordinal, content=" ".join(buf),
+                        source_ref=_ts(start or 0)))
+    db.commit()
+    db.refresh(doc)
+    return doc
+
+
 def search(db: Session, user_id: str, query: str, k: int = 4,
            document_id: str | None = None) -> list[DocChunk]:
     """Return the top-k most relevant chunks for the user (optionally scoped to
