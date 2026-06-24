@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { coursesApi, Course, Step } from "@/lib/courses";
+import Markdown from "@/components/Markdown";
 
 export default function CourseRoadmap() {
   const { user, loading } = useAuth();
@@ -69,7 +70,23 @@ function StepCard({
   const [answer, setAnswer] = useState("");
   const [quiz, setQuiz] = useState<{ question: string; options: string[] } | null>(null);
   const [feedback, setFeedback] = useState("");
+  const [selected, setSelected] = useState<string | null>(null);
+  const [correct, setCorrect] = useState<boolean | null>(null);
   const [busy, setBusy] = useState("");
+
+  async function answerQuiz(opt: string) {
+    if (!quiz) return;
+    setSelected(opt);
+    setBusy("grade");
+    try {
+      const r = await coursesApi.grade(courseId, step.id, quiz.question, opt);
+      setCorrect(r.correct);
+      setFeedback(r.feedback);
+      if (r.correct) onChanged();
+    } finally {
+      setBusy("");
+    }
+  }
 
   async function run(label: string, fn: () => Promise<void>) {
     setBusy(label);
@@ -117,7 +134,10 @@ function StepCard({
               {busy === "sum" ? "…" : "Summarize"}
             </button>
             <button
-              onClick={() => run("quiz", async () => { setQuiz(await coursesApi.quiz(courseId, step.id)); setFeedback(""); })}
+              onClick={() => run("quiz", async () => {
+                setQuiz(await coursesApi.quiz(courseId, step.id));
+                setFeedback(""); setSelected(null); setCorrect(null);
+              })}
               className="rounded-lg border border-quest-muted/30 px-3 py-1.5 hover:border-quest-cyan"
             >
               {busy === "quiz" ? "…" : "Quiz me"}
@@ -132,7 +152,7 @@ function StepCard({
             )}
           </div>
 
-          {summary && <pre className="whitespace-pre-wrap rounded-xl bg-quest-bg p-3 text-sm">{summary}</pre>}
+          {summary && <div className="rounded-xl bg-quest-bg p-3"><Markdown>{summary}</Markdown></div>}
 
           <div className="flex gap-2">
             <input
@@ -149,30 +169,40 @@ function StepCard({
               {busy === "ask" ? "…" : "Ask"}
             </button>
           </div>
-          {answer && <pre className="whitespace-pre-wrap rounded-xl bg-quest-bg p-3 text-sm">{answer}</pre>}
+          {answer && <div className="rounded-xl bg-quest-bg p-3"><Markdown>{answer}</Markdown></div>}
 
           {quiz && (
             <div className="rounded-xl bg-quest-bg p-3">
               <p className="text-sm font-medium">{quiz.question}</p>
               <div className="mt-2 space-y-2">
-                {quiz.options.map((opt, i) => (
-                  <button
-                    key={i}
-                    onClick={() =>
-                      run("grade", async () => {
-                        const r = await coursesApi.grade(courseId, step.id, quiz.question, opt);
-                        setFeedback(r.feedback);
-                        if (r.correct) onChanged();
-                      })
-                    }
-                    className="block w-full rounded-lg border border-quest-muted/30 px-3 py-2 text-left text-sm hover:border-quest-cyan"
-                  >
-                    {opt}
-                  </button>
-                ))}
+                {quiz.options.map((opt, i) => {
+                  const isSel = selected === opt;
+                  const cls = isSel
+                    ? correct
+                      ? "border-quest-lime bg-quest-lime/15 text-quest-lime"
+                      : "border-red-400 bg-red-400/10 text-red-300"
+                    : "border-quest-muted/30 hover:border-quest-cyan";
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => answerQuiz(opt)}
+                      disabled={busy === "grade"}
+                      className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm disabled:opacity-60 ${cls}`}
+                    >
+                      <span>{opt}</span>
+                      {isSel && <span>{correct ? "✓" : "✗"}</span>}
+                    </button>
+                  );
+                })}
               </div>
+              {busy === "grade" && <p className="mt-2 text-xs text-quest-muted">Checking…</p>}
               {feedback && (
-                <pre className="mt-3 whitespace-pre-wrap rounded-lg bg-quest-surface p-3 text-sm">{feedback}</pre>
+                <div className={`mt-3 rounded-lg border p-3 ${correct ? "border-quest-lime/40" : "border-red-400/30"} bg-quest-surface`}>
+                  <p className={`mb-1 text-xs font-semibold ${correct ? "text-quest-lime" : "text-red-300"}`}>
+                    {correct ? "Correct! 🎉" : "Not quite — here's the idea:"}
+                  </p>
+                  <Markdown>{feedback}</Markdown>
+                </div>
               )}
             </div>
           )}

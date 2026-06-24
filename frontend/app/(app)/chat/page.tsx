@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { chatWsUrl } from "@/lib/ws";
+import Markdown from "@/components/Markdown";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -95,13 +96,15 @@ export default function ChatPage() {
           <div key={i} className={m.role === "user" ? "text-right" : "text-left"}>
             {m.agent && <p className="mb-1 text-xs text-quest-cyan">{m.agent}</p>}
             <div
-              className={`inline-block max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm ${
+              className={`inline-block max-w-[85%] rounded-2xl px-4 py-3 text-left text-sm ${
                 m.role === "user"
-                  ? "bg-quest-violet text-white"
+                  ? "whitespace-pre-wrap bg-quest-violet text-white"
                   : "bg-quest-surface text-quest-text"
               }`}
             >
-              {m.content || <span className="opacity-50">…</span>}
+              {m.role === "assistant"
+                ? (m.content ? <Markdown>{m.content}</Markdown> : <span className="opacity-50">…</span>)
+                : m.content}
             </div>
           </div>
         ))}

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
+import Markdown from "@/components/Markdown";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000/api";
 
@@ -111,7 +112,7 @@ export default function StudyPage() {
         <input type="file" accept="image/*" onChange={onImage} className="mt-4 text-sm" />
         {imgBusy && <p className="mt-3 text-sm text-quest-muted">Reading the image…</p>}
         {imgAnswer && (
-          <pre className="mt-4 whitespace-pre-wrap rounded-xl bg-quest-bg p-4 text-sm">{imgAnswer}</pre>
+          <div className="mt-4 rounded-xl bg-quest-bg p-4"><Markdown>{imgAnswer}</Markdown></div>
         )}
       </section>
 
@@ -161,7 +162,7 @@ export default function StudyPage() {
         </div>
         {answer && (
           <div className="mt-4">
-            <pre className="whitespace-pre-wrap rounded-xl bg-quest-bg p-4 text-sm">{answer}</pre>
+            <div className="rounded-xl bg-quest-bg p-4"><Markdown>{answer}</Markdown></div>
             {citations.length > 0 && (
               <div className="mt-3 space-y-1 text-xs text-quest-muted">
                 <p className="font-semibold text-quest-cyan">Sources</p>

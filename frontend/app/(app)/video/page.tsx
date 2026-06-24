@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { apiFetch, ApiError } from "@/lib/api";
 
+import Markdown from "@/components/Markdown";
+
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000/api";
 
 interface Video {
@@ -167,7 +169,7 @@ export default function VideoPage() {
           </div>
           {answer && (
             <div className="mt-4">
-              <pre className="whitespace-pre-wrap rounded-xl bg-quest-bg p-3 text-sm">{answer}</pre>
+              <div className="rounded-xl bg-quest-bg p-3"><Markdown>{answer}</Markdown></div>
               {citations.length > 0 && (
                 <div className="mt-3 space-y-1 text-xs text-quest-muted">
                   <p className="font-semibold text-quest-cyan">Timestamps</p>

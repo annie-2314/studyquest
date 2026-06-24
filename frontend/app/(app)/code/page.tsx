@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
+import Markdown from "@/components/Markdown";
 
 interface RunResult {
   ok: boolean;
@@ -125,7 +126,7 @@ export default function CodePage() {
           <p className={`text-sm font-display ${approved ? "text-quest-lime" : "text-quest-cyan"}`}>
             {approved ? "✓ Passed review" : "Needs work"}
           </p>
-          <pre className="mt-2 whitespace-pre-wrap text-sm">{review}</pre>
+          <div className="mt-2"><Markdown>{review}</Markdown></div>
         </div>
       )}
     </main>
