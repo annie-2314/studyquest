@@ -83,6 +83,24 @@ export default function Dashboard() {
             A multi-agent crew builds a personalized study plan you can download as a PDF.
           </p>
         </Link>
+        <Link
+          href="/progress"
+          className="rounded-2xl border border-quest-muted/20 bg-quest-surface p-6 hover:border-quest-cyan"
+        >
+          <h2 className="font-display text-lg font-semibold text-quest-cyan">📊 My Progress</h2>
+          <p className="mt-2 text-sm text-quest-muted">
+            Charts of mastery, XP, streaks, and your tracked weak spots over time.
+          </p>
+        </Link>
+        <Link
+          href="/teacher"
+          className="rounded-2xl border border-quest-muted/20 bg-quest-surface p-6 hover:border-quest-cyan"
+        >
+          <h2 className="font-display text-lg font-semibold text-quest-cyan">👩‍🏫 Teacher View</h2>
+          <p className="mt-2 text-sm text-quest-muted">
+            For teacher/parent accounts: monitor every student&apos;s progress.
+          </p>
+        </Link>
       </div>
 
       <button
