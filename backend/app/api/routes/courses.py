@@ -92,6 +92,31 @@ def create_course(payload: CourseIn, user: User = Depends(get_current_user),
     return _course_json(course)
 
 
+_DEMO_STEPS = [
+    ("rfscVS0vtbw", "Intro & Setup: What is Python?", 600),
+    ("rfscVS0vtbw", "Variables, Types & Operators", 1500),
+    ("rfscVS0vtbw", "Control Flow: if / loops", 1800),
+    ("rfscVS0vtbw", "Functions & Modules", 1200),
+    ("rfscVS0vtbw", "Final Project & Recap", 2100),
+]
+
+
+@router.post("/demo", status_code=201)
+def create_demo_course(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Create a sample roadmap WITHOUT touching YouTube, so the roadmap UI,
+    per-step completion, progress %, and XP can be demoed on any network."""
+    course = Course(user_id=user.id, title="Sample Course: Python Basics (offline demo)",
+                    playlist_url="demo", total_seconds=sum(d for _, _, d in _DEMO_STEPS))
+    db.add(course)
+    db.flush()
+    for i, (vid, title, dur) in enumerate(_DEMO_STEPS):
+        db.add(CourseStep(course_id=course.id, ordinal=i, video_id=vid, title=title,
+                          duration_seconds=dur))
+    db.commit()
+    db.refresh(course)
+    return _course_json(course)
+
+
 @router.get("")
 def list_courses(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     courses = (db.query(Course).filter(Course.user_id == user.id)

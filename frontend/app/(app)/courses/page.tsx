@@ -35,6 +35,19 @@ export default function CoursesPage() {
     }
   }
 
+  async function loadDemo() {
+    setError("");
+    setBusy(true);
+    try {
+      const c = await coursesApi.demo();
+      router.push(`/courses/${c.id}`);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.detail : "Could not load sample course");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading || !user) return <main className="p-10 text-quest-muted">Loading...</main>;
 
   return (
@@ -61,6 +74,14 @@ export default function CoursesPage() {
         </button>
       </div>
       {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+
+      <button
+        onClick={loadDemo}
+        disabled={busy}
+        className="mt-3 text-sm text-quest-cyan underline-offset-2 hover:underline disabled:opacity-50"
+      >
+        No YouTube access? Load a sample course →
+      </button>
 
       <div className="mt-8 space-y-3">
         {courses.map((c) => (

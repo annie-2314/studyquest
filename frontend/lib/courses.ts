@@ -34,6 +34,7 @@ export const coursesApi = {
   get: (id: string) => apiFetch<Course>(`/courses/${id}`, {}, token()),
   create: (playlist_url: string) =>
     apiFetch<Course>("/courses", { method: "POST", body: JSON.stringify({ playlist_url }) }, token()),
+  demo: () => apiFetch<Course>("/courses/demo", { method: "POST" }, token()),
   complete: (cid: string, sid: string) =>
     apiFetch<Course>(`/courses/${cid}/steps/${sid}/complete`, { method: "POST" }, token()),
   summarize: (cid: string, sid: string) =>
