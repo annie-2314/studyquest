@@ -1,6 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 
 export default function Dashboard() {
@@ -16,9 +17,24 @@ export default function Dashboard() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
       <h1 className="font-display text-3xl font-bold">Welcome, {user.display_name} 👋</h1>
-      <p className="mt-3 text-quest-muted">
-        Your quest begins in Phase 2 — the AI tutor, roadmaps, and games are on the way.
-      </p>
+      <p className="mt-3 text-quest-muted">Pick up your quest where you left off.</p>
+
+      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        <Link
+          href="/chat"
+          className="rounded-2xl border border-quest-muted/20 bg-quest-surface p-6 hover:border-quest-cyan"
+        >
+          <h2 className="font-display text-lg font-semibold text-quest-cyan">💬 Chat Tutor</h2>
+          <p className="mt-2 text-sm text-quest-muted">
+            Ask anything. The supervisor routes you to the right specialist agent and streams the answer live.
+          </p>
+        </Link>
+        <div className="rounded-2xl border border-quest-muted/10 bg-quest-surface/50 p-6 opacity-70">
+          <h2 className="font-display text-lg font-semibold">🗺️ Course Roadmaps</h2>
+          <p className="mt-2 text-sm text-quest-muted">YouTube playlists → trackable quests (coming next).</p>
+        </div>
+      </div>
+
       <button
         onClick={logout}
         className="mt-8 rounded-xl border border-quest-muted/40 px-5 py-2 hover:border-quest-cyan"
