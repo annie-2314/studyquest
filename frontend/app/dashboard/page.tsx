@@ -29,6 +29,15 @@ export default function Dashboard() {
             Ask anything. The supervisor routes you to the right specialist agent and streams the answer live.
           </p>
         </Link>
+        <Link
+          href="/study"
+          className="rounded-2xl border border-quest-muted/20 bg-quest-surface p-6 hover:border-quest-cyan"
+        >
+          <h2 className="font-display text-lg font-semibold text-quest-cyan">🧪 Study Tools</h2>
+          <p className="mt-2 text-sm text-quest-muted">
+            Solve a problem from a photo, or build a knowledge base and ask grounded, cited questions.
+          </p>
+        </Link>
         <div className="rounded-2xl border border-quest-muted/10 bg-quest-surface/50 p-6 opacity-70">
           <h2 className="font-display text-lg font-semibold">🗺️ Course Roadmaps</h2>
           <p className="mt-2 text-sm text-quest-muted">YouTube playlists → trackable quests (coming next).</p>
