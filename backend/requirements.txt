@@ -17,3 +17,6 @@ langchain-core>=0.3.10,<0.4
 langchain-openai>=0.2.2,<0.3
 # --- Phase 3: basic RAG (offline, no vector server) ---
 rank-bm25==0.2.2
+# --- Phase 4: YouTube ingestion (no API key required) ---
+yt-dlp==2024.8.6
+youtube-transcript-api==0.6.2

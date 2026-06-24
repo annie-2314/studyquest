@@ -38,10 +38,15 @@ export default function Dashboard() {
             Solve a problem from a photo, or build a knowledge base and ask grounded, cited questions.
           </p>
         </Link>
-        <div className="rounded-2xl border border-quest-muted/10 bg-quest-surface/50 p-6 opacity-70">
-          <h2 className="font-display text-lg font-semibold">🗺️ Course Roadmaps</h2>
-          <p className="mt-2 text-sm text-quest-muted">YouTube playlists → trackable quests (coming next).</p>
-        </div>
+        <Link
+          href="/courses"
+          className="rounded-2xl border border-quest-muted/20 bg-quest-surface p-6 hover:border-quest-cyan"
+        >
+          <h2 className="font-display text-lg font-semibold text-quest-cyan">🗺️ Course Roadmaps</h2>
+          <p className="mt-2 text-sm text-quest-muted">
+            Paste a YouTube playlist → a step-by-step quest with summaries, Q&amp;A, and quizzes.
+          </p>
+        </Link>
       </div>
 
       <button
