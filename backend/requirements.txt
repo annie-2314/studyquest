@@ -15,7 +15,8 @@ email-validator==2.2.0
 langgraph>=0.2.20,<0.3
 langchain-core>=0.3.10,<0.4
 langchain-openai>=0.2.2,<0.3
-truststore==0.9.2  # use OS cert store (works behind TLS-inspecting proxies)
+truststore==0.9.2  # OS cert store for the httpx/LLM client (TLS-inspecting proxies)
+pip-system-certs==4.0  # makes urllib/requests (yt-dlp, transcripts) use the OS cert store too
 # --- Phase 3: basic RAG (offline, no vector server) ---
 rank-bm25==0.2.2
 # --- Phase 4: YouTube ingestion (no API key required) ---

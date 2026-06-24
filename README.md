@@ -38,6 +38,9 @@ gamifies the whole journey. **All 10 build phases are implemented.**
 - Code sandbox is a timeout-bounded subprocess (best-effort); use Judge0/Docker in production.
 - CrewAI itself needs MS C++ Build Tools on Windows (chromadb/hnswlib); the crew runs without it.
 - Optional file transcription needs `faster-whisper`; the YouTube-URL path works without it.
+- Behind TLS-inspecting proxies, `truststore` + `pip-system-certs` make Python use the OS cert store.
+- YouTube ingestion (roadmap/video-RAG) depends on YouTube not rate-limiting/blocking your network;
+  on blocked networks transcript fetches return empty and the app shows a graceful "no transcript" message.
 
 ## Project layout
 ```
