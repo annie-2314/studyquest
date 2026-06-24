@@ -21,7 +21,37 @@ export interface AuthResponse {
   user: User;
 }
 
-export async function apiFetch<T>(path: string, opts: RequestInit = {}, token?: string): Promise<T> {
+const ACCESS_KEY = "sq_access";
+const REFRESH_KEY = "sq_refresh";
+
+/** Exchange the stored refresh token for a fresh access token (rotates the
+ * refresh token too). Returns the new access token, or null if it can't. */
+async function tryRefresh(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  const rt = localStorage.getItem(REFRESH_KEY);
+  if (!rt) return null;
+  try {
+    const resp = await fetch(`${BASE}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: rt }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    localStorage.setItem(ACCESS_KEY, data.access_token);
+    localStorage.setItem(REFRESH_KEY, data.refresh_token);
+    return data.access_token as string;
+  } catch {
+    return null;
+  }
+}
+
+export async function apiFetch<T>(
+  path: string,
+  opts: RequestInit = {},
+  token?: string,
+  _retried = false
+): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(opts.headers as Record<string, string>),
@@ -33,6 +63,13 @@ export async function apiFetch<T>(path: string, opts: RequestInit = {}, token?: 
     resp = await fetch(`${BASE}${path}`, { ...opts, headers });
   } catch {
     throw new ApiError("Cannot reach the server. Is the backend running?", "network_error", 0);
+  }
+
+  // Transparent token refresh: on a 401 (expired access token), use the refresh
+  // token to mint a new one and retry the request once.
+  if (resp.status === 401 && !_retried && !path.startsWith("/auth/")) {
+    const fresh = await tryRefresh();
+    if (fresh) return apiFetch<T>(path, opts, fresh, true);
   }
 
   if (!resp.ok) {
