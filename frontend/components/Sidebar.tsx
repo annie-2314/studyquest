@@ -13,7 +13,6 @@ const NAV = [
   { href: "/arcade", label: "Arcade", icon: "🎮" },
   { href: "/plan", label: "Study Plan + PDF", icon: "📝" },
   { href: "/progress", label: "My Progress", icon: "📊" },
-  { href: "/teacher", label: "Teacher View", icon: "👩‍🏫" },
   { href: "/insights", label: "Insights & Eval", icon: "🔬" },
 ];
 
