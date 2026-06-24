@@ -40,11 +40,14 @@ export default function ChatPage() {
         // Start a fresh assistant bubble labeled with the routed agent.
         setMessages((m) => [...m, { role: "assistant", agent: msg.agent, content: "" }]);
       } else if (msg.type === "token") {
+        // PURE update — never mutate the existing message object, or React's
+        // Strict Mode (dev) double-invokes this and appends each token twice.
         setMessages((m) => {
-          const copy = [...m];
-          const last = copy[copy.length - 1];
-          if (last && last.role === "assistant") last.content += msg.data;
-          return copy;
+          if (!m.length) return m;
+          const last = m[m.length - 1];
+          if (last.role !== "assistant") return m;
+          const updated = { ...last, content: last.content + msg.data };
+          return [...m.slice(0, -1), updated];
         });
       } else if (msg.type === "done") {
         convRef.current = msg.conversation_id;
