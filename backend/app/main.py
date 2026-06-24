@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
-from app.api.routes import health
+from app.api.routes import health, auth
 
 app = FastAPI(title="StudyQuest AI")
 
@@ -32,3 +32,4 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 
 app.include_router(health.router, prefix="/api")
+app.include_router(auth.router, prefix="/api")
