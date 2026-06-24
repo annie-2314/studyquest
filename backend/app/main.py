@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
-from app.api.routes import health, auth, chat, study, courses
+from app.api.routes import health, auth, chat, study, courses, code
 
 app = FastAPI(title="StudyQuest AI")
 
@@ -36,3 +36,4 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(study.router, prefix="/api")
 app.include_router(courses.router, prefix="/api")
+app.include_router(code.router, prefix="/api")

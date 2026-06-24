@@ -7,7 +7,9 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.agents import course_agent
+from app.agents.code_review import review_code
 from app.api.deps import get_current_user
+from app.sandbox import run_code
 from app.database import get_db
 from app.models.course import Course, CourseStep
 from app.models.user import User
@@ -167,3 +169,24 @@ def grade_step(course_id: str, step_id: str, payload: GradeIn,
         s.quiz_passed = True
         db.commit()
     return result
+
+
+class CodeReviewIn(BaseModel):
+    language: str = "python"
+    code: str
+    task: str = ""
+
+
+@router.post("/{course_id}/steps/{step_id}/code-review")
+def code_review_step(course_id: str, step_id: str, payload: CodeReviewIn,
+                     user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """For coding courses: run the student's code and review it. The step is only
+    marked truly complete when the Code-Review agent returns a PASS verdict."""
+    s = _get_owned_step(db, course_id, step_id, user)
+    run = run_code(payload.language, payload.code)
+    review = review_code(payload.language, payload.code, run, payload.task)
+    if review["approved"]:
+        s.completed = True
+        s.quiz_passed = True
+        db.commit()
+    return {"run": run, **review, "course": _course_json(_get_owned_course(db, course_id, user))}

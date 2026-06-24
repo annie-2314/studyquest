@@ -47,6 +47,15 @@ export default function Dashboard() {
             Paste a YouTube playlist → a step-by-step quest with summaries, Q&amp;A, and quizzes.
           </p>
         </Link>
+        <Link
+          href="/code"
+          className="rounded-2xl border border-quest-muted/20 bg-quest-surface p-6 hover:border-quest-cyan"
+        >
+          <h2 className="font-display text-lg font-semibold text-quest-cyan">💻 Code Playground</h2>
+          <p className="mt-2 text-sm text-quest-muted">
+            Write code, run it in a sandbox, and get an AI code review for coding courses.
+          </p>
+        </Link>
       </div>
 
       <button
