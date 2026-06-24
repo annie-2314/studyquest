@@ -7,9 +7,13 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
 from app.api.routes import (health, auth, chat, study, courses, code, video,
-                            game, plan, analytics)
+                            game, plan, analytics, evaluation)
+from app.observability import init_tracing
 
 app = FastAPI(title="StudyQuest AI")
+
+# Enable LangSmith tracing if configured (no-op otherwise).
+init_tracing()
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,3 +46,4 @@ app.include_router(video.router, prefix="/api")
 app.include_router(game.router, prefix="/api")
 app.include_router(plan.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
+app.include_router(evaluation.router, prefix="/api")

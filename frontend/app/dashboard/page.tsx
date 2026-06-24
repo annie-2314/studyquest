@@ -101,6 +101,15 @@ export default function Dashboard() {
             For teacher/parent accounts: monitor every student&apos;s progress.
           </p>
         </Link>
+        <Link
+          href="/insights"
+          className="rounded-2xl border border-quest-muted/20 bg-quest-surface p-6 hover:border-quest-cyan"
+        >
+          <h2 className="font-display text-lg font-semibold text-quest-cyan">🔬 Insights &amp; Eval</h2>
+          <p className="mt-2 text-sm text-quest-muted">
+            LangSmith tracing status, quiz-improvement trend, and LLM-as-judge scoring.
+          </p>
+        </Link>
       </div>
 
       <button

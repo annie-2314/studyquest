@@ -1,17 +1,43 @@
 # StudyQuest AI
 
-A gamified, multi-agent AI tutoring platform. **Phase 1** delivers a running shell:
-an animated landing page, custom-JWT auth, and a SQLite/Postgres-ready database.
+A gamified, multi-agent AI tutoring platform. Explains any concept (text/image/video),
+turns YouTube courses into trackable roadmaps, remembers each learner's weak spots, and
+gamifies the whole journey. **All 10 build phases are implemented.**
 
 ## Architecture
 - **Backend:** FastAPI + SQLAlchemy 2.0 + Alembic + Pydantic v2 (`backend/`).
-- **Frontend:** Next.js 14 (App Router) + TypeScript + Tailwind + Framer Motion (`frontend/`).
+- **Frontend:** Next.js 14 (App Router) + TypeScript + Tailwind + Framer Motion + Recharts (`frontend/`).
 - **DB:** SQLite for dev (zero install); set `DATABASE_URL` to a Postgres URL for prod — no code change.
 - **Auth:** custom JWT (short-lived access token + hashed, rotating, revocable refresh tokens).
+- **LLM:** OpenRouter (OpenAI-compatible). One env var `OPENROUTER_API_KEY` powers every agent.
+  **Without a key the whole app still runs** in a deterministic mock mode; set the key to go live.
+- **Agent frameworks:** LangGraph (stateful supervisor + per-student memory, hard step budget)
+  and a role-based Study-Plan crew (Planner → Question-Writer → Reviewer).
 
-Later phases add the LangGraph supervisor + specialist agents, CrewAI study-plan crew,
-multimodal learning, YouTube roadmaps, code review, video RAG, gamification, dashboards,
-guardrails, and LangSmith tracing. See `docs/superpowers/specs/`.
+## Features by phase
+1. Landing page + JWT auth + DB shell.
+2. LangGraph supervisor + streaming chat tutor (`/chat`) + per-student memory.
+3. Multimodal image solver + basic RAG with citations (`/study`).
+4. ⭐ YouTube playlist → trackable roadmap: per-video completion, summaries, transcript Q&A
+   (timestamp citations), quizzes with real-life-example fallback (`/courses`).
+5. Sandboxed code runner + Code-Review agent (`/code`).
+6. Video RAG — YouTube URL or whisper upload → ask with timestamps (`/video`).
+7. Gamification — XP, levels, streaks, badges, leaderboard, flashcards, boss quiz (`/arcade`).
+8. Study-plan crew + PDF study-guide export (`/plan`).
+9. Student + teacher dashboards with progress analytics (`/progress`, `/teacher`).
+10. LangSmith tracing (env-gated) + evaluation harness (LLM-as-judge) + citations
+    (`/insights`, `python -m scripts.run_eval`).
+
+## API keys (all optional to *run*; required for *real* AI output)
+- `OPENROUTER_API_KEY` — the only key needed for live AI across every feature.
+- `LANGCHAIN_API_KEY` + `LANGCHAIN_TRACING_V2=true` — optional LangSmith tracing.
+- No YouTube API key needed (uses yt-dlp + youtube-transcript-api).
+
+## Notes / environment-driven choices
+- RAG uses BM25 (offline, no vector server); swap in Qdrant/pgvector behind `app/rag/store.py`.
+- Code sandbox is a timeout-bounded subprocess (best-effort); use Judge0/Docker in production.
+- CrewAI itself needs MS C++ Build Tools on Windows (chromadb/hnswlib); the crew runs without it.
+- Optional file transcription needs `faster-whisper`; the YouTube-URL path works without it.
 
 ## Project layout
 ```
