@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Consumed by tailwind.config.ts fontFamily tokens. Falls back to system
+     fonts if the Google Fonts stylesheet (loaded in layout) is unavailable. */
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+body {
+  background-color: theme('colors.quest.bg');
+  color: theme('colors.quest.text');
+  font-family: var(--font-body), system-ui, sans-serif;
+}
