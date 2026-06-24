@@ -65,6 +65,15 @@ export default function Dashboard() {
             Add a video, then ask questions answered with timestamp citations.
           </p>
         </Link>
+        <Link
+          href="/arcade"
+          className="rounded-2xl border border-quest-muted/20 bg-quest-surface p-6 hover:border-quest-cyan"
+        >
+          <h2 className="font-display text-lg font-semibold text-quest-cyan">🎮 Arcade</h2>
+          <p className="mt-2 text-sm text-quest-muted">
+            XP, levels, streaks, badges, leaderboard, flashcards, and boss-battle quizzes.
+          </p>
+        </Link>
       </div>
 
       <button

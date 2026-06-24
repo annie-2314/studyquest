@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.agents import course_agent
 from app.agents.code_review import review_code
 from app.api.deps import get_current_user
+from app.gamification import service as game
 from app.sandbox import run_code
 from app.database import get_db
 from app.models.course import Course, CourseStep
@@ -109,9 +110,15 @@ def get_course(course_id: str, user: User = Depends(get_current_user), db: Sessi
 def complete_step(course_id: str, step_id: str, user: User = Depends(get_current_user),
                   db: Session = Depends(get_db)):
     s = _get_owned_step(db, course_id, step_id, user)
+    newly_completed = not s.completed
     s.completed = True
     db.commit()
-    return _course_json(_get_owned_course(db, course_id, user))
+    if newly_completed:
+        game.award_xp(db, user.id, game.XP_STEP_COMPLETE, reason="step complete")
+    course = _get_owned_course(db, course_id, user)
+    if all(st.completed and st.quiz_passed for st in course.steps) and course.steps:
+        game.award_badge(db, user.id, "course_complete")
+    return _course_json(course)
 
 
 @router.post("/{course_id}/steps/{step_id}/summarize")
@@ -165,9 +172,10 @@ def grade_step(course_id: str, step_id: str, payload: GradeIn,
     except YouTubeError:
         segments = []
     result = course_agent.grade_answer(s.title, payload.question, payload.selected, segments)
-    if result["correct"]:
+    if result["correct"] and not s.quiz_passed:
         s.quiz_passed = True
         db.commit()
+        game.award_xp(db, user.id, game.XP_QUIZ_PASS, reason="quiz passed")
     return result
 
 
@@ -189,4 +197,6 @@ def code_review_step(course_id: str, step_id: str, payload: CodeReviewIn,
         s.completed = True
         s.quiz_passed = True
         db.commit()
+        game.award_xp(db, user.id, game.XP_CODE_PASS, reason="code review passed")
+        game.award_badge(db, user.id, "code_master")
     return {"run": run, **review, "course": _course_json(_get_owned_course(db, course_id, user))}
