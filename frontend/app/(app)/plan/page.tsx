@@ -7,26 +7,34 @@ import { apiFetch } from "@/lib/api";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000/api";
 
-interface Module {
+interface Resource { label: string; url: string; }
+interface Phase {
   title: string;
-  objectives: string[];
-  practice_questions?: string[];
+  duration: string;
+  topics: string[];
+  resources: Resource[];
 }
-interface Plan {
-  topic: string;
+interface Roadmap {
+  goal: string;
+  hours_per_week: number;
+  timeline: string;
+  language: string;
   personalized_for: string[];
-  modules: Module[];
+  phases: Phase[];
   review_notes: string;
   engine: string;
 }
 
 const tok = () => localStorage.getItem("sq_access") ?? undefined;
 
-export default function PlanPage() {
+export default function RoadmapPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [topic, setTopic] = useState("");
-  const [plan, setPlan] = useState<Plan | null>(null);
+  const [goal, setGoal] = useState("");
+  const [hours, setHours] = useState(5);
+  const [timeline, setTimeline] = useState("8 weeks");
+  const [language, setLanguage] = useState("");
+  const [plan, setPlan] = useState<Roadmap | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -34,10 +42,14 @@ export default function PlanPage() {
   }, [loading, user, router]);
 
   async function generate() {
+    if (!goal.trim()) return;
     setBusy(true);
     setPlan(null);
     try {
-      setPlan(await apiFetch<Plan>("/plan", { method: "POST", body: JSON.stringify({ topic }) }, tok()));
+      setPlan(await apiFetch<Roadmap>("/plan", {
+        method: "POST",
+        body: JSON.stringify({ goal, hours_per_week: hours, timeline, language }),
+      }, tok()));
     } finally {
       setBusy(false);
     }
@@ -54,7 +66,7 @@ export default function PlanPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `studyquest-${plan.topic}.pdf`;
+    a.download = `roadmap-${plan.goal}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -64,47 +76,100 @@ export default function PlanPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
       <Link href="/dashboard" className="text-sm text-quest-cyan">← Dashboard</Link>
-      <h1 className="mt-4 font-display text-3xl font-bold">Study Plan Crew</h1>
+      <h1 className="mt-4 font-display text-3xl font-bold">🗺️ Roadmap</h1>
       <p className="mt-2 text-sm text-quest-muted">
-        A Planner → Question-Writer → Reviewer crew builds a personalized plan (using your stored
-        weak spots), exportable as a PDF.
+        Tell me what you want to get proficient in and how much time you have. A Planner →
+        Curator → Reviewer crew builds a time-boxed path — what to cover, in order, with YouTube
+        lectures and resources — that you can download as a PDF.
       </p>
 
-      <div className="mt-6 flex gap-2">
-        <input
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          placeholder="What do you want to learn?"
-          className="flex-1 rounded-xl border border-quest-muted/30 bg-quest-bg px-4 py-3 text-sm outline-none focus:border-quest-cyan"
-        />
-        <button onClick={generate} disabled={busy || !topic.trim()} className="rounded-xl bg-quest-violet px-6 py-3 text-sm font-display disabled:opacity-50">
-          {busy ? "Crew working…" : "Build plan"}
+      <div className="mt-6 space-y-3 rounded-2xl border border-quest-muted/20 bg-quest-surface p-5">
+        <label className="block text-sm">
+          <span className="text-quest-muted">I want to become proficient in…</span>
+          <input
+            value={goal}
+            onChange={(e) => setGoal(e.target.value)}
+            placeholder="e.g. Python, Agentic AI, Machine Learning, Organic Chemistry"
+            className="mt-1 w-full rounded-xl border border-quest-muted/30 bg-quest-bg px-4 py-3 text-sm outline-none focus:border-quest-cyan"
+          />
+        </label>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="block text-sm">
+            <span className="text-quest-muted">Hours / week</span>
+            <input
+              type="number" min={1} max={60} value={hours}
+              onChange={(e) => setHours(Math.max(1, Number(e.target.value) || 1))}
+              className="mt-1 w-full rounded-xl border border-quest-muted/30 bg-quest-bg px-4 py-2 text-sm outline-none focus:border-quest-cyan"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="text-quest-muted">Target timeline</span>
+            <select
+              value={timeline}
+              onChange={(e) => setTimeline(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-quest-muted/30 bg-quest-bg px-4 py-2 text-sm outline-none focus:border-quest-cyan"
+            >
+              <option>2 weeks</option>
+              <option>4 weeks</option>
+              <option>8 weeks</option>
+              <option>3 months</option>
+              <option>6 months</option>
+            </select>
+          </label>
+          <label className="block text-sm">
+            <span className="text-quest-muted">Language (optional)</span>
+            <input
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              placeholder="e.g. Python, English, Hindi"
+              className="mt-1 w-full rounded-xl border border-quest-muted/30 bg-quest-bg px-4 py-2 text-sm outline-none focus:border-quest-cyan"
+            />
+          </label>
+        </div>
+
+        <button onClick={generate} disabled={busy || !goal.trim()}
+          className="rounded-xl bg-quest-violet px-6 py-3 text-sm font-display disabled:opacity-50">
+          {busy ? "Crew building your roadmap…" : "Build my roadmap"}
         </button>
       </div>
 
       {plan && (
         <div className="mt-8">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-semibold">{plan.topic}</h2>
-            <button onClick={downloadPdf} className="rounded-lg border border-quest-muted/40 px-4 py-1.5 text-sm hover:border-quest-cyan">
+            <h2 className="font-display text-xl font-semibold">{plan.goal}</h2>
+            <button onClick={downloadPdf}
+              className="rounded-lg border border-quest-muted/40 px-4 py-1.5 text-sm hover:border-quest-cyan">
               ⬇ Download PDF
             </button>
           </div>
-          <p className="mt-1 text-xs text-quest-muted">engine: {plan.engine}
-            {plan.personalized_for.length > 0 && ` · focus: ${plan.personalized_for.join(", ")}`}</p>
+          <p className="mt-1 text-xs text-quest-muted">
+            {plan.timeline} · ~{plan.hours_per_week} hrs/week
+            {plan.language && ` · ${plan.language}`}
+            {plan.personalized_for.length > 0 && ` · focus: ${plan.personalized_for.join(", ")}`}
+          </p>
 
           <ol className="mt-4 space-y-3">
-            {plan.modules.map((m, i) => (
+            {plan.phases.map((p, i) => (
               <li key={i} className="rounded-2xl border border-quest-muted/20 bg-quest-surface p-5">
-                <h3 className="font-display font-semibold text-quest-cyan">{i + 1}. {m.title}</h3>
+                <div className="flex items-baseline justify-between gap-3">
+                  <h3 className="font-display font-semibold text-quest-cyan">{i + 1}. {p.title}</h3>
+                  {p.duration && <span className="shrink-0 text-xs text-quest-muted">{p.duration}</span>}
+                </div>
                 <ul className="mt-2 list-disc pl-5 text-sm text-quest-muted">
-                  {m.objectives.map((o, j) => <li key={j}>{o}</li>)}
+                  {p.topics.map((t, j) => <li key={j}>{t}</li>)}
                 </ul>
-                {m.practice_questions && m.practice_questions.length > 0 && (
+                {p.resources.length > 0 && (
                   <div className="mt-3">
-                    <p className="text-xs font-semibold text-quest-lime">Practice</p>
-                    <ul className="mt-1 list-decimal pl-5 text-sm">
-                      {m.practice_questions.map((q, j) => <li key={j}>{q}</li>)}
+                    <p className="text-xs font-semibold text-quest-lime">Watch / read</p>
+                    <ul className="mt-1 space-y-1 text-sm">
+                      {p.resources.map((r, j) => (
+                        <li key={j}>
+                          <a href={r.url} target="_blank" rel="noreferrer" className="text-quest-cyan hover:underline">
+                            {r.label}
+                          </a>
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 )}

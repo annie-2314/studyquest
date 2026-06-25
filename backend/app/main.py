@@ -10,7 +10,17 @@ from app.api.routes import (health, auth, chat, study, courses, code, video,
                             game, plan, analytics, evaluation)
 from app.observability import init_tracing
 
-app = FastAPI(title="StudyQuest AI")
+def _init_db() -> None:
+    """Create any missing tables on boot so a fresh database (e.g. a brand-new
+    cloud Postgres/SQLite on first deploy) is usable immediately. Importing
+    `app.models` registers every table on the shared Base; create_all is a no-op
+    for tables that already exist, so it's safe to run on every startup."""
+    import app.models  # noqa: F401  (registers all ORM models on Base.metadata)
+    from app.database import Base, engine
+    Base.metadata.create_all(bind=engine)
+
+
+app = FastAPI(title="StudyQuest AI", on_startup=[_init_db])
 
 # Enable LangSmith tracing if configured (no-op otherwise).
 init_tracing()

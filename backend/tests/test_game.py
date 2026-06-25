@@ -50,3 +50,21 @@ def test_minigames_return_content():
     boss = client.post("/api/game/boss", headers=h, json={"topic": "fractions"})
     assert boss.status_code == 200 and len(boss.json()["questions"]) >= 1
     assert "answer_index" in boss.json()["questions"][0]
+
+
+def test_summarize_returns_text():
+    h = {"Authorization": f"Bearer " + client.post("/api/auth/signup", json={
+        "email": "sum@x.com", "password": "supersecret", "display_name": "SUM"}).json()["access_token"]}
+    r = client.post("/api/game/summarize", headers=h, json={"topic": "photosynthesis"})
+    assert r.status_code == 200
+    assert isinstance(r.json()["summary"], str) and r.json()["summary"].strip()
+
+
+def test_explain_returns_text():
+    h = {"Authorization": f"Bearer " + client.post("/api/auth/signup", json={
+        "email": "ex@x.com", "password": "supersecret", "display_name": "EX"}).json()["access_token"]}
+    r = client.post("/api/game/explain", headers=h, json={
+        "topic": "fractions", "concept": "What is a fraction?",
+        "correct_answer": "part of a whole", "interest": "football"})
+    assert r.status_code == 200
+    assert isinstance(r.json()["explanation"], str) and r.json()["explanation"].strip()

@@ -4,12 +4,12 @@ import { useAuth } from "@/lib/auth";
 
 const QUICK = [
   { href: "/chat", icon: "💬", title: "Chat Tutor", desc: "Ask anything — the supervisor routes you to the right specialist and streams the answer live." },
-  { href: "/courses", icon: "🗺️", title: "Course Roadmaps", desc: "Paste a YouTube playlist → a step-by-step quest with summaries, Q&A, and quizzes." },
+  { href: "/arcade", icon: "📚", title: "Learn", desc: "Bring a topic, an upload, or a web link → get a summary, an explanation tuned to what you love, and a quiz." },
+  { href: "/plan", icon: "🗺️", title: "Roadmap", desc: "Say your goal, time, and language → a time-boxed learning path with topics, resources, and YouTube lectures, as a PDF." },
+  { href: "/courses", icon: "🎓", title: "Courses", desc: "Paste a YouTube playlist → a step-by-step course with summaries, Q&A, and quizzes." },
   { href: "/study", icon: "🧪", title: "Study Tools", desc: "Solve a problem from a photo, or build a knowledge base and ask grounded, cited questions." },
   { href: "/video", icon: "🎬", title: "Video RAG", desc: "Add a YouTube link or upload a local video, then ask questions with timestamp citations." },
   { href: "/code", icon: "💻", title: "Code Playground", desc: "Write code, run it in a sandbox, and get an AI code review." },
-  { href: "/arcade", icon: "🎮", title: "Arcade", desc: "XP, streaks, badges, leaderboard, and games built from your own material." },
-  { href: "/plan", icon: "📝", title: "Study Plan + PDF", desc: "A multi-agent crew builds a personalized plan you can download as a PDF." },
   { href: "/progress", icon: "📊", title: "My Progress", desc: "Charts of mastery, XP, streaks, and your tracked weak spots." },
 ];
 

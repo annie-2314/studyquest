@@ -47,6 +47,26 @@ def add_document(payload: DocIn, user: User = Depends(get_current_user),
     return {"id": doc.id, "title": doc.title, "chunks": len(doc.chunks)}
 
 
+class UrlIn(BaseModel):
+    url: str
+
+
+@router.post("/documents/url", status_code=201)
+def add_document_from_url(payload: UrlIn, user: User = Depends(get_current_user),
+                          db: Session = Depends(get_db)):
+    """Fetch a web page and store its text as a knowledge-base document, so it
+    can be queried in RAG and played from in the Arcade like any upload."""
+    from app.web_ingest import fetch_url_text
+
+    try:
+        title, text = fetch_url_text(payload.url)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    doc = store.add_document(db, user.id, title, text, kind="web",
+                             source_prefix=payload.url.strip())
+    return {"id": doc.id, "title": doc.title, "kind": doc.kind, "chunks": len(doc.chunks)}
+
+
 @router.get("/documents")
 def list_documents(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     docs = (db.query(Document).filter(Document.user_id == user.id)

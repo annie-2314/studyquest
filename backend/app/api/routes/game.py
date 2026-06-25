@@ -76,3 +76,29 @@ def boss(payload: TopicIn, user: User = Depends(get_current_user),
          db: Session = Depends(get_db)):
     topic, context = _context_for(db, user, payload)
     return {"questions": game_master.boss_quiz(topic, context=context)}
+
+
+@router.post("/summarize")
+def summarize(payload: TopicIn, user: User = Depends(get_current_user),
+              db: Session = Depends(get_db)):
+    """Tell the learner what a topic / uploaded doc / pasted page is about."""
+    topic, context = _context_for(db, user, payload)
+    return {"summary": game_master.summarize(topic, context=context)}
+
+
+class ExplainIn(TopicIn):
+    concept: str = ""          # the question/idea to explain (falls back to topic)
+    correct_answer: str = ""   # the right option, so the explanation reinforces it
+    interest: str = ""         # what the learner likes — personalises the example
+
+
+@router.post("/explain")
+def explain(payload: ExplainIn, user: User = Depends(get_current_user),
+            db: Session = Depends(get_db)):
+    """Explain a quiz concept clearly, with an example tailored to the learner's
+    interest (or a code snippet for programming concepts)."""
+    topic, context = _context_for(db, user, payload)
+    concept = payload.concept.strip() or topic
+    text = game_master.explain(concept, context=context,
+                               interest=payload.interest, correct_answer=payload.correct_answer)
+    return {"explanation": text}

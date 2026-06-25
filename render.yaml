@@ -1,0 +1,46 @@
+# Render Blueprint — deploys both the FastAPI backend and the Next.js frontend
+# on Render's FREE plan. Push this repo to GitHub, then in Render:
+#   New +  ->  Blueprint  ->  pick this repo.
+#
+# After the first deploy you MUST set the cross-URL env vars by hand (they
+# depend on the generated *.onrender.com URLs — see DEPLOY.md):
+#   - studyquest-web  ->  NEXT_PUBLIC_API_BASE = https://studyquest-api.onrender.com/api
+#   - studyquest-api  ->  FRONTEND_ORIGIN      = https://studyquest-web.onrender.com
+# Then trigger a redeploy of each so the new values take effect.
+
+services:
+  # ---- FastAPI backend (supports WebSockets — required for the chat tutor) ----
+  - type: web
+    name: studyquest-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.6"
+      - key: SECRET_KEY
+        generateValue: true          # Render generates a strong random value
+      - key: OPENROUTER_API_KEY
+        sync: false                   # paste your key in the dashboard (secret)
+      - key: OPENROUTER_MODEL_FAST
+        value: deepseek/deepseek-chat
+      - key: OPENROUTER_MODEL_SMART
+        value: openai/gpt-4o-mini
+      - key: FRONTEND_ORIGIN
+        sync: false                   # = the deployed frontend URL (set after 1st deploy)
+      - key: DATABASE_URL
+        sync: false                   # optional: a free Neon/Supabase Postgres URL for persistence
+
+  # ---- Next.js frontend ----
+  - type: web
+    name: studyquest-web
+    runtime: node
+    rootDir: frontend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npx next start -p $PORT
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE
+        sync: false                   # = https://studyquest-api.onrender.com/api (set before build)
