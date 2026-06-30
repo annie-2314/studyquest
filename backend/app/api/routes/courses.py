@@ -10,6 +10,7 @@ from app.agents import course_agent
 from app.agents.code_review import review_code
 from app.api.deps import get_current_user
 from app.gamification import service as game
+from app.learning import service as mastery
 from app.sandbox import run_code
 from app.database import get_db
 from app.models.course import Course, CourseStep
@@ -197,6 +198,8 @@ def grade_step(course_id: str, step_id: str, payload: GradeIn,
     except YouTubeError:
         segments = []
     result = course_agent.grade_answer(s.title, payload.question, payload.selected, segments)
+    # Knowledge tracing: each graded answer updates mastery for this step's concept.
+    mastery.record_attempt(db, user.id, s.title, bool(result.get("correct")))
     if result["correct"] and not s.quiz_passed:
         s.quiz_passed = True
         db.commit()

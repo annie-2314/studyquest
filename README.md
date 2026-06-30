@@ -12,7 +12,37 @@ gamifies the whole journey. **All 10 build phases are implemented.**
 - **LLM:** OpenRouter (OpenAI-compatible). One env var `OPENROUTER_API_KEY` powers every agent.
   **Without a key the whole app still runs** in a deterministic mock mode; set the key to go live.
 - **Agent frameworks:** LangGraph (stateful supervisor + per-student memory, hard step budget)
-  and a role-based Study-Plan crew (Planner → Question-Writer → Reviewer).
+  and role-based crews (Planner → Curator → Reviewer).
+
+### Architecture diagram
+```mermaid
+flowchart LR
+  subgraph Client
+    UI[Next.js app<br/>chat · learn · materials · roadmap · insights]
+  end
+  subgraph API[FastAPI backend]
+    SUP[LangGraph supervisor<br/>route → respond]
+    CREW[Role crews<br/>Planner→Curator→Reviewer]
+    RAGG[Grounded RAG<br/>cited answers]
+    BKT[Knowledge tracing<br/>Bayesian BKT]
+    EVAL[Eval harness<br/>LLM-as-judge]
+  end
+  subgraph Models[Models / stores]
+    LLM[(LLM layer<br/>OpenRouter · Groq · Ollama)]
+    EMB[(bge-small embeddings<br/>fastembed/ONNX)]
+    VDB[(Vector store<br/>NumPy cosine / pgvector)]
+    DB[(SQLAlchemy DB<br/>SQLite / Postgres)]
+  end
+  UI -- REST + WebSocket --> API
+  SUP --> LLM
+  CREW --> LLM
+  RAGG --> EMB --> VDB
+  RAGG --> LLM
+  EVAL --> LLM
+  BKT --> DB
+  API --> DB
+  API -. traces .-> OBS[(LangSmith / Langfuse)]
+```
 
 ## Features by phase
 1. Landing page + JWT auth + DB shell.
@@ -27,6 +57,43 @@ gamifies the whole journey. **All 10 build phases are implemented.**
 9. Student + teacher dashboards with progress analytics (`/progress`, `/teacher`).
 10. LangSmith tracing (env-gated) + evaluation harness (LLM-as-judge) + citations
     (`/insights`, `python -m scripts.run_eval`).
+
+## Grounded RAG + adaptive learning (engineered upgrade)
+Beyond the LLM-knowledge tutor, StudyQuest now grounds answers in the student's own
+materials and models what they actually know:
+
+- **Grounded RAG over your materials** (`/materials`): upload a **PDF** (PyMuPDF) or paste
+  notes → token-aware chunks (~500 tok, 50 overlap) → embedded **locally and free** with
+  **`BAAI/bge-small-en-v1.5` via `fastembed` (ONNX, no PyTorch, no build tools)** → stored
+  as vectors in the relational DB. Answers are retrieved by **NumPy cosine** and the tutor
+  responds **only from your sources with inline citations** (`from <source>, p.12`); if nothing
+  relevant is retrieved it **says so instead of hallucinating**.
+  Endpoints: `POST /materials/ingest` (PDF), `POST /materials/ingest/text`, `GET /materials`,
+  `POST /materials/ask`.
+- **Knowledge tracing (BKT)** — the differentiator: per-concept **Bayesian Knowledge Tracing**
+  (`p_init/p_transit/p_slip/p_guess`) exposes mastery `0..1`. Every graded quiz answer updates
+  the tagged concept's mastery and a spaced **review schedule**; weak concepts drive adaptation.
+  Endpoints: `GET /learning/mastery` (per-concept + over-time history), `GET /learning/review-queue`,
+  `POST /learning/attempt`. The **Insights** page visualizes mastery bars + the review queue.
+
+**Free-model stack:** `fastembed` (bge-small, ONNX) for embeddings, `pymupdf` for PDF/figure
+extraction, `faster-whisper` (optional) for audio/video transcription — **no paid keys, no
+compiler.** The vector store is a clean interface (`app/materials/store.py`) so ChromaDB/Qdrant
+can be swapped in later. Everything is mock-runnable: set `EMBEDDINGS_MOCK=1` for a deterministic
+hash embedding (used by the test suite, so CI never downloads a model).
+
+- **Multimodal ingestion:** PDF **figures** are extracted (PyMuPDF) and indexed alongside text so
+  images are retrievable; set `ENABLE_IMAGE_CAPTIONS=1` (+ transformers/torch) to auto-describe them
+  with the free **BLIP** model. A **YouTube/audio URL** can be ingested into the same grounded index
+  (`POST /materials/ingest/url` → transcript → chunks).
+- **Eval harness (LLM-as-judge):** `POST /eval/factuality` scores how grounded an answer is in its
+  sources (catches hallucination); `POST /eval/quiz-validity` checks quiz items. Results persist
+  (`eval_results`) and surface in the **Insights** "Recent evaluations" widget.
+- **Tracing:** LangSmith (existing) **and** optional **Langfuse** — both env-gated and no-op without
+  keys (`app/observability.py`).
+- **Local LLM mode:** set `LLM_BACKEND=ollama` to run fully offline against a local **Ollama**
+  (e.g. `llama3.1`) via its OpenAI-compatible endpoint; if Ollama isn't reachable it degrades
+  gracefully to the mock tutor instead of hanging.
 
 ## API keys (all optional to *run*; required for *real* AI output)
 - `OPENROUTER_API_KEY` — the only key needed for live AI across every feature.

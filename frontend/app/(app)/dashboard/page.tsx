@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 const QUICK = [
   { href: "/chat", icon: "💬", title: "Chat Tutor", desc: "Ask anything — the supervisor routes you to the right specialist and streams the answer live." },
   { href: "/arcade", icon: "📚", title: "Learn", desc: "Bring a topic, an upload, or a web link → get a summary, an explanation tuned to what you love, and a quiz." },
+  { href: "/materials", icon: "📄", title: "My Materials", desc: "Upload PDFs / notes → grounded answers that cite your own sources (and say so when it's not in them)." },
   { href: "/plan", icon: "🗺️", title: "Roadmap", desc: "Say your goal, time, and language → a time-boxed learning path with topics, resources, and YouTube lectures, as a PDF." },
   { href: "/courses", icon: "🎓", title: "Courses", desc: "Paste a YouTube playlist → a step-by-step course with summaries, Q&A, and quizzes." },
   { href: "/study", icon: "🧪", title: "Study Tools", desc: "Solve a problem from a photo, or build a knowledge base and ask grounded, cited questions." },

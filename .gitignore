@@ -18,3 +18,11 @@ next-env.d.ts
 # OS
 .DS_Store
 Thumbs.db
+
+# Personal documents (never publish resume/CV)
+*[Rr]esume*
+*[Cc]urriculum[ _]?[Vv]itae*
+*_CV.pdf
+
+# Build artifacts
+*.tsbuildinfo

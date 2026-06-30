@@ -1,10 +1,15 @@
-# Optional: Phase 1 runs natively with SQLite and does NOT need this.
-# Use `docker compose up -d db` to get a Postgres for production-parity testing,
-# then set in backend/.env:
-#   DATABASE_URL=postgresql+psycopg://studyquest:studyquest@localhost:5432/studyquest
+# Optional: the app runs natively with SQLite and does NOT need this.
+#
+# `docker compose up -d db`         → Postgres + pgvector for production-parity / vector search
+# `docker compose up --build`       → also build & run the backend container
+#
+# To use Postgres + pgvector, set in backend/.env (note the @ in a password must be
+# URL-encoded as %40):
+#   DATABASE_URL=postgresql+psycopg2://studyquest:studyquest@localhost:5432/studyquest
+#   VECTOR_BACKEND=pgvector
 services:
   db:
-    image: postgres:16
+    image: pgvector/pgvector:pg16   # Postgres 16 with the vector extension preinstalled
     environment:
       POSTGRES_USER: studyquest
       POSTGRES_PASSWORD: studyquest
@@ -13,5 +18,25 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studyquest"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://studyquest:studyquest@db:5432/studyquest
+      VECTOR_BACKEND: pgvector
+      # Pass your LLM key/model here (or leave blank for mock mode):
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      FRONTEND_ORIGIN: http://localhost:3000
+    ports:
+      - "8001:8000"
+
 volumes:
   pgdata:

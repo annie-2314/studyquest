@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install deps
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run tests (mock LLM + mock embeddings — no keys, no model downloads)
+        working-directory: backend
+        env:
+          OPENROUTER_API_KEY: ""
+          EMBEDDINGS_MOCK: "1"
+        run: python -m pytest -q
+
+  frontend:
+    name: Frontend (typecheck + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install deps
+        working-directory: frontend
+        run: npm install
+      - name: Typecheck
+        working-directory: frontend
+        run: npx tsc --noEmit
+      - name: Build
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_BASE: http://localhost:8001/api
+        run: npm run build

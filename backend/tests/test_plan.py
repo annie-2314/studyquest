@@ -53,3 +53,20 @@ def test_plan_endpoint_and_pdf_download():
     assert pdf.status_code == 200
     assert pdf.headers["content-type"] == "application/pdf"
     assert pdf.content[:4] == b"%PDF"
+
+
+def test_roadmaps_are_saved_listed_and_deletable():
+    h = {"Authorization": f"Bearer {_token('rmsave@x.com')}"}
+    made = client.post("/api/plan", headers=h, json={"goal": "calculus"}).json()
+    rid = made["id"]
+    assert rid
+
+    lst = client.get("/api/plan/list", headers=h)
+    assert lst.status_code == 200 and any(r["id"] == rid for r in lst.json())
+
+    got = client.get(f"/api/plan/{rid}", headers=h)
+    assert got.status_code == 200 and got.json()["goal"] == "calculus" and got.json()["phases"]
+
+    dele = client.delete(f"/api/plan/{rid}", headers=h)
+    assert dele.status_code == 204
+    assert client.get(f"/api/plan/{rid}", headers=h).status_code == 404

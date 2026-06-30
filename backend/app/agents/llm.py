@@ -33,37 +33,56 @@ _llm_cache: dict = {}
 
 
 def _model_for(tier: str) -> str:
+    if settings.llm_backend == "ollama":
+        return settings.ollama_model_smart if tier == SMART else settings.ollama_model_fast
     return settings.openrouter_model_smart if tier == SMART else settings.openrouter_model_fast
 
 
-def get_llm(tier: str = FAST, temperature: float = 0.3):
-    """Return a cached LangChain chat model bound to OpenRouter, or None if no key.
+def _ollama_up() -> bool:
+    """Quick reachability probe so an offline Ollama degrades to mock, not a hang."""
+    import socket
+    from urllib.parse import urlparse
 
-    Callers should check `settings.has_llm` (or a None return) and use the mock
-    helpers below when the model is unavailable.
+    netloc = urlparse(settings.ollama_base_url).netloc or "localhost:11434"
+    host, _, port = netloc.partition(":")
+    try:
+        with socket.create_connection((host, int(port or 11434)), timeout=0.5):
+            return True
+    except OSError:
+        return False
+
+
+def get_llm(tier: str = FAST, temperature: float = 0.3):
+    """Return a cached LangChain chat model for the selected backend, or None.
+
+    Backends: OpenRouter (cloud, needs a key) or Ollama (local, no key). When the
+    model is unavailable (no key, or Ollama offline) we return None so callers
+    fall back to the deterministic mock helpers below.
     """
     if not settings.has_llm:
         return None
 
-    cache_key = (tier, temperature, _model_for(tier))
+    from langchain_openai import ChatOpenAI  # lazy import
+
+    cache_key = (settings.llm_backend, tier, temperature, _model_for(tier))
     if cache_key in _llm_cache:
         return _llm_cache[cache_key]
 
-    # Imported lazily so the app imports cleanly even if langchain isn't present.
-    from langchain_openai import ChatOpenAI
-
-    model = ChatOpenAI(
-        model=_model_for(tier),
-        temperature=temperature,
-        api_key=settings.openrouter_api_key,
-        base_url=settings.openrouter_base_url,
-        max_retries=3,  # ride out transient proxy/network hiccups
-        # OpenRouter recommends these headers for attribution; harmless if unused.
-        default_headers={
-            "HTTP-Referer": "https://studyquest.ai",
-            "X-Title": "StudyQuest AI",
-        },
-    )
+    if settings.llm_backend == "ollama":
+        if not _ollama_up():
+            return None  # graceful fallback → mock, no crash/hang
+        model = ChatOpenAI(
+            model=_model_for(tier), temperature=temperature,
+            api_key="ollama",  # Ollama ignores the key but the client requires one
+            base_url=settings.ollama_base_url, max_retries=1,
+        )
+    else:
+        model = ChatOpenAI(
+            model=_model_for(tier), temperature=temperature,
+            api_key=settings.openrouter_api_key, base_url=settings.openrouter_base_url,
+            max_retries=3,
+            # No app-attribution headers — anonymous in the OpenRouter log ("Unknown").
+        )
     _llm_cache[cache_key] = model
     return model
 

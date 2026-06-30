@@ -191,7 +191,15 @@ export default function Learn() {
     if (revealed) return;
     setSelected(i);
     setRevealed(true);
-    if (i === boss[bossIdx].answer_index) setBossScore((s) => s + 1);
+    const correct = i === boss[bossIdx].answer_index;
+    if (correct) setBossScore((s) => s + 1);
+    // Knowledge tracing: record this attempt against the current concept.
+    const concept = currentTitle().trim();
+    if (concept) {
+      apiFetch("/learning/attempt", {
+        method: "POST", body: JSON.stringify({ concept, correct }),
+      }, tok()).catch(() => {});
+    }
   }
   async function next() {
     if (bossIdx + 1 < boss.length) {

@@ -44,3 +44,32 @@ def test_eval_endpoints():
 
     obs = client.get("/api/eval/obs-status", headers=h)
     assert obs.status_code == 200 and "tracing" in obs.json()
+
+    # Traces endpoint: tracing is off in tests, so it returns a clean empty set.
+    tr = client.get("/api/eval/traces", headers=h)
+    assert tr.status_code == 200
+    assert tr.json()["enabled"] is False and tr.json()["runs"] == []
+
+
+def test_factuality_grounded_vs_hallucinated_and_persisted():
+    h = {"Authorization": f"Bearer {_token('fact@x.com')}"}
+    sources = ["Photosynthesis happens in the chloroplasts of plant cells."]
+
+    grounded = client.post("/api/eval/factuality", headers=h, json={
+        "answer": "Photosynthesis occurs in chloroplasts.", "sources": sources})
+    assert grounded.status_code == 200 and grounded.json()["grounded"] is True
+
+    hallu = client.post("/api/eval/factuality", headers=h, json={
+        "answer": "Photosynthesis occurs on the moon made of cheese.", "sources": sources})
+    assert hallu.status_code == 200 and hallu.json()["grounded"] is False
+
+    # Both runs are persisted and surfaced by the report endpoint.
+    res = client.get("/api/eval/results", headers=h)
+    assert res.status_code == 200 and len([r for r in res.json() if r["kind"] == "factuality"]) >= 2
+
+
+def test_quiz_validity_endpoint():
+    h = {"Authorization": f"Bearer {_token('qv@x.com')}"}
+    r = client.post("/api/eval/quiz-validity", headers=h, json={
+        "question": "What is 2 + 2?", "options": ["4", "5", "6", "7"], "answer_index": 0})
+    assert r.status_code == 200 and r.json()["valid"] is True

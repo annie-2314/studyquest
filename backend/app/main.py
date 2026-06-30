@@ -7,7 +7,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
 from app.api.routes import (health, auth, chat, study, courses, code, video,
-                            game, plan, analytics, evaluation)
+                            game, plan, analytics, evaluation, materials, learning)
 from app.observability import init_tracing
 
 def _init_db() -> None:
@@ -17,6 +17,16 @@ def _init_db() -> None:
     for tables that already exist, so it's safe to run on every startup."""
     import app.models  # noqa: F401  (registers all ORM models on Base.metadata)
     from app.database import Base, engine
+
+    # pgvector: ensure the extension exists before create_all builds vector columns.
+    if settings.vector_backend == "pgvector":
+        from sqlalchemy import text
+        try:
+            with engine.begin() as conn:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        except Exception:
+            pass  # extension may require superuser; surfaced at query time if missing
+
     Base.metadata.create_all(bind=engine)
 
 
@@ -57,3 +67,5 @@ app.include_router(game.router, prefix="/api")
 app.include_router(plan.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(evaluation.router, prefix="/api")
+app.include_router(materials.router, prefix="/api")
+app.include_router(learning.router, prefix="/api")

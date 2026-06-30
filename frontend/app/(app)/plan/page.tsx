@@ -15,6 +15,7 @@ interface Phase {
   resources: Resource[];
 }
 interface Roadmap {
+  id?: string;
   goal: string;
   hours_per_week: number;
   timeline: string;
@@ -24,6 +25,7 @@ interface Roadmap {
   review_notes: string;
   engine: string;
 }
+interface RoadmapMeta { id: string; goal: string; timeline: string; created_at: string; }
 
 const tok = () => localStorage.getItem("sq_access") ?? undefined;
 
@@ -36,20 +38,49 @@ export default function RoadmapPage() {
   const [language, setLanguage] = useState("");
   const [plan, setPlan] = useState<Roadmap | null>(null);
   const [busy, setBusy] = useState(false);
+  const [list, setList] = useState<RoadmapMeta[]>([]);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
   }, [loading, user, router]);
+
+  const loadList = () =>
+    apiFetch<RoadmapMeta[]>("/plan/list", {}, tok()).then(setList).catch(() => {});
+
+  // On load, fetch saved roadmaps and auto-open the most recent so it doesn't
+  // disappear when you navigate away and come back.
+  useEffect(() => {
+    if (!user) return;
+    apiFetch<RoadmapMeta[]>("/plan/list", {}, tok())
+      .then((rows) => {
+        setList(rows);
+        if (rows.length > 0) openRoadmap(rows[0].id);
+      })
+      .catch(() => {});
+  }, [user]);
+
+  function openRoadmap(id: string) {
+    apiFetch<Roadmap>(`/plan/${id}`, {}, tok()).then(setPlan).catch(() => {});
+  }
+
+  async function deleteRoadmap(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    await apiFetch(`/plan/${id}`, { method: "DELETE" }, tok()).catch(() => {});
+    if (plan?.id === id) setPlan(null);
+    loadList();
+  }
 
   async function generate() {
     if (!goal.trim()) return;
     setBusy(true);
     setPlan(null);
     try {
-      setPlan(await apiFetch<Roadmap>("/plan", {
+      const r = await apiFetch<Roadmap>("/plan", {
         method: "POST",
         body: JSON.stringify({ goal, hours_per_week: hours, timeline, language }),
-      }, tok()));
+      }, tok());
+      setPlan(r);
+      loadList();   // newly saved roadmap appears in the history list
     } finally {
       setBusy(false);
     }
@@ -133,6 +164,37 @@ export default function RoadmapPage() {
           {busy ? "Crew building your roadmap…" : "Build my roadmap"}
         </button>
       </div>
+
+      {list.length > 0 && (
+        <div className="mt-6">
+          <h2 className="font-display text-sm font-semibold text-quest-muted">Your roadmaps</h2>
+          <div className="mt-2 space-y-2">
+            {list.map((r) => (
+              <div
+                key={r.id}
+                onClick={() => openRoadmap(r.id)}
+                className={`flex cursor-pointer items-center justify-between rounded-xl border px-4 py-2 text-sm transition hover:border-quest-cyan ${
+                  plan?.id === r.id ? "border-quest-cyan bg-quest-surface" : "border-quest-muted/20 bg-quest-surface"
+                }`}
+              >
+                <div>
+                  <span className="font-medium text-quest-text">{r.goal}</span>
+                  <span className="ml-2 text-xs text-quest-muted">
+                    {r.timeline} · {new Date(r.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+                <button
+                  onClick={(e) => deleteRoadmap(r.id, e)}
+                  title="Delete"
+                  className="rounded-lg px-2 py-1 text-xs text-quest-muted hover:text-red-400"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {plan && (
         <div className="mt-8">

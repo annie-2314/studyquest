@@ -22,6 +22,9 @@ _YT_PATTERNS = [
     r"youtu\.be/([A-Za-z0-9_-]{6,})",
     r"[?&]v=([A-Za-z0-9_-]{6,})",
     r"youtube\.com/embed/([A-Za-z0-9_-]{6,})",
+    r"youtube\.com/shorts/([A-Za-z0-9_-]{6,})",
+    r"youtube\.com/live/([A-Za-z0-9_-]{6,})",
+    r"youtube\.com/v/([A-Za-z0-9_-]{6,})",
 ]
 
 

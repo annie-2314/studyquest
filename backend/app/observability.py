@@ -19,3 +19,33 @@ def init_tracing() -> dict:
         os.environ["LANGCHAIN_PROJECT"] = settings.langchain_project
         return {"tracing": True, "project": settings.langchain_project}
     return {"tracing": False, "project": None}
+
+
+_langfuse_cb = None  # cached handler
+
+
+def langfuse_callbacks() -> list:
+    """LangChain callbacks for Langfuse tracing, or [] when not configured.
+
+    Env-gated and fully optional: if LANGFUSE_* keys aren't set (or the langfuse
+    package isn't installed) this is a no-op, so the app runs unchanged. Pass the
+    result to `model.invoke(..., config={"callbacks": langfuse_callbacks()})`.
+    """
+    global _langfuse_cb
+    if not settings.langfuse_enabled:
+        return []
+    if _langfuse_cb is not None:
+        return [_langfuse_cb]
+    try:  # newer (langfuse>=2) then older import path
+        try:
+            from langfuse.langchain import CallbackHandler
+        except Exception:
+            from langfuse.callback import CallbackHandler
+        _langfuse_cb = CallbackHandler(
+            public_key=settings.langfuse_public_key,
+            secret_key=settings.langfuse_secret_key,
+            host=settings.langfuse_host,
+        )
+        return [_langfuse_cb]
+    except Exception:
+        return []

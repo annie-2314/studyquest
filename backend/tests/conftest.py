@@ -9,6 +9,8 @@ os.environ["DATABASE_URL"] = "sqlite:///./test_studyquest.db"
 # so the suite never makes real, billable OpenRouter calls.
 os.environ["OPENROUTER_API_KEY"] = ""
 os.environ["LANGCHAIN_TRACING_V2"] = "false"
+# Use the deterministic hash embedding so tests never download the bge model.
+os.environ["EMBEDDINGS_MOCK"] = "1"
 
 # Start every test session from a clean database so inserts (e.g. signup) are
 # idempotent across repeated runs.

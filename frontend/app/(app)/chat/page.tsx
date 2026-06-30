@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
 import { chatWsUrl } from "@/lib/ws";
 import Markdown from "@/components/Markdown";
 
@@ -11,6 +12,10 @@ interface ChatMessage {
   agent?: string;
   content: string;
 }
+
+// Remember the active conversation across page navigations.
+const CONV_KEY = "sq_conv";
+const tok = () => localStorage.getItem("sq_access") ?? undefined;
 
 export default function ChatPage() {
   const { user, loading } = useAuth();
@@ -26,6 +31,35 @@ export default function ChatPage() {
   useEffect(() => {
     if (!loading && !user) router.push("/login");
   }, [loading, user, router]);
+
+  // Restore the last conversation (id + messages) when returning to the page.
+  useEffect(() => {
+    if (!user) return;
+    const saved = localStorage.getItem(CONV_KEY);
+    if (!saved) return;
+    convRef.current = saved;
+    apiFetch<{ role: string; agent?: string; content: string }[]>(
+      `/chat/conversations/${saved}/messages`, {}, tok()
+    )
+      .then((rows) =>
+        setMessages(rows.map((r) => ({
+          role: r.role === "assistant" ? "assistant" : "user",
+          agent: r.agent || undefined,
+          content: r.content,
+        })))
+      )
+      .catch(() => {
+        // Conversation no longer exists (e.g. DB reset) — start fresh.
+        localStorage.removeItem(CONV_KEY);
+        convRef.current = null;
+      });
+  }, [user]);
+
+  function newChat() {
+    convRef.current = null;
+    localStorage.removeItem(CONV_KEY);
+    setMessages([]);
+  }
 
   // Open the WebSocket once authenticated.
   useEffect(() => {
@@ -51,6 +85,7 @@ export default function ChatPage() {
         });
       } else if (msg.type === "done") {
         convRef.current = msg.conversation_id;
+        localStorage.setItem(CONV_KEY, msg.conversation_id);  // survive navigation
         setStreaming(false);
       } else if (msg.type === "error") {
         setMessages((m) => [...m, { role: "assistant", content: `⚠️ ${msg.detail}` }]);
@@ -84,9 +119,14 @@ export default function ChatPage() {
         <Link href="/dashboard" className="font-display text-lg font-bold">
           Study<span className="text-quest-lime">Quest</span> · Tutor
         </Link>
-        <span className={`text-xs ${connected ? "text-quest-lime" : "text-quest-muted"}`}>
-          {connected ? "● live" : "○ connecting"}
-        </span>
+        <div className="flex items-center gap-3">
+          <button onClick={newChat} className="rounded-lg border border-quest-muted/30 px-3 py-1 text-xs hover:border-quest-cyan">
+            + New chat
+          </button>
+          <span className={`text-xs ${connected ? "text-quest-lime" : "text-quest-muted"}`}>
+            {connected ? "● live" : "○ connecting"}
+          </span>
+        </div>
       </header>
 
       <div className="flex-1 space-y-4 overflow-y-auto py-4">

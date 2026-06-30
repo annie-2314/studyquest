@@ -62,6 +62,67 @@ def run_explanation_eval(prompts: list[str] | None = None) -> dict:
     return {"average_score": avg, "n": len(results), "results": results}
 
 
+def _parse_json(text: str) -> dict | None:
+    m = re.search(r"\{.*\}", text, flags=re.DOTALL)
+    if not m:
+        return None
+    try:
+        return json.loads(m.group(0))
+    except json.JSONDecodeError:
+        return None
+
+
+def judge_factuality(answer: str, sources: list[str]) -> dict:
+    """Score how well an answer is grounded in the provided source chunks
+    (0..1). Detects hallucination = claims not supported by the sources."""
+    src = "\n\n".join(f"[{i + 1}] {s}" for i, s in enumerate(sources))
+    model = llm_mod.get_llm(llm_mod.SMART)
+    if model is None or not sources:
+        # Heuristic: fraction of answer words that appear in the sources.
+        words = re.findall(r"[a-z0-9]{4,}", answer.lower())
+        joined = " ".join(sources).lower()
+        overlap = sum(1 for w in set(words) if w in joined)
+        score = round(overlap / max(len(set(words)), 1), 2) if words else 0.0
+        return {"score": score, "grounded": score >= 0.5,
+                "rationale": "Heuristic lexical-overlap score (no judge LLM / no sources)."}
+    msgs = [("system", "You are a factuality judge. Given SOURCES and an ANSWER, decide whether "
+                       "every claim in the answer is supported by the sources. Output JSON only: "
+                       '{"score": <0..1 grounded fraction>, "grounded": <true|false>, '
+                       '"rationale": "<one sentence; name any unsupported claim>"}.'),
+            ("user", f"SOURCES:\n{src}\n\nANSWER:\n{answer}")]
+    obj = _parse_json(model.invoke(msgs).content) or {}
+    try:
+        score = float(obj.get("score", 0.0))
+    except (TypeError, ValueError):
+        score = 0.0
+    return {"score": round(min(max(score, 0.0), 1.0), 2),
+            "grounded": bool(obj.get("grounded", score >= 0.5)),
+            "rationale": str(obj.get("rationale", ""))}
+
+
+def judge_quiz_validity(question: str, options: list[str], answer_index: int) -> dict:
+    """Score whether a multiple-choice item is well-formed: exactly one clearly
+    correct option, plausible distractors (0..1)."""
+    model = llm_mod.get_llm(llm_mod.SMART)
+    if model is None:
+        ok = bool(question.strip()) and len(options) >= 2 and 0 <= answer_index < len(options)
+        return {"score": 1.0 if ok else 0.0, "valid": ok,
+                "rationale": "Structural check (no judge LLM configured)."}
+    opts = "\n".join(f"{i}. {o}" for i, o in enumerate(options))
+    msgs = [("system", "You are a quiz-validity judge. Decide if the item has exactly one correct "
+                       "option (the marked index), unambiguous wording, and plausible distractors. "
+                       'Output JSON only: {"score": <0..1>, "valid": <bool>, "rationale": "<one sentence>"}.'),
+            ("user", f"Question: {question}\nOptions:\n{opts}\nMarked correct index: {answer_index}")]
+    obj = _parse_json(model.invoke(msgs).content) or {}
+    try:
+        score = float(obj.get("score", 0.0))
+    except (TypeError, ValueError):
+        score = 0.0
+    return {"score": round(min(max(score, 0.0), 1.0), 2),
+            "valid": bool(obj.get("valid", score >= 0.5)),
+            "rationale": str(obj.get("rationale", ""))}
+
+
 def quiz_improvement(db: Session, user_id: str) -> dict:
     """Compare the learner's quiz pass-rate in the first vs second half of their
     course steps (ordinal order) as a simple improvement signal."""
